@@ -1,0 +1,95 @@
+{
+    "Outputs": {
+        "InstanceAccess": {
+            "Description": "Get the Command to access the instance using SSH",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "ssh -i ShiviKey.pem ec2-user@",
+                        {
+                            "Fn::GetAtt": [
+                                "WebServer",
+                                "PublicIp"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        },
+        "WebUrl": {
+            "Description": "Get the Web URL of the instance",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "WebServer",
+                                "PublicDnsName"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    },
+    "Parameters": {
+        "KeyName": {
+            "Description": "SSH Key Pair that is used to access the instance",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "LampSg": {
+            "Properties": {
+                "GroupDescription": "LAMP SecurityGroup with Permission for Port 80 & 22",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "22",
+                        "IpProtocol": "tcp",
+                        "ToPort": "22"
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "ToPort": "80"
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "WebServer": {
+            "Properties": {
+                "ImageId": "ami-0998bf58313ab53da",
+                "InstanceType": "t2.micro",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "LampSg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "\n",
+                            [
+                                "#!/bin/bash",
+                                "sudo yum -y install httpd",
+                                "sudo echo '<html><head><title>Welcome</title></head><body><h1>Welcome to EC2 WebServer Test Page</h1><body></html>' > /var/www/html/test.html",
+                                "sudo service httpd start",
+                                "sudo chkconfig httpd on"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::EC2::Instance"
+        }
+    }
+}
